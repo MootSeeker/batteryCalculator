@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v4  # Checkt das Repository aus
 
     - name: Download Artifact
-      uses: actions/download-artifact@v2  # Lade das erstellte Artefakt herunter
+      uses: actions/download-artifact@v3  # Lade das erstellte Artefakt herunter (aktualisierte Version v3)
       with:
         name: dist/calculator.exe  # Pfad zur erstellten .exe-Datei
 
