@@ -1,152 +1,264 @@
-import pandas as pd
+import tkinter as tk
+from tkinter import ttk
 
-# Funktion für den Always ON Mode
-def berechne_akkulaufzeit_always_on(akkuspannung, interne_spannung, akkukapazität_mah, stromverbrauch_geraet, stromverbrauch_verbraucher, verbraucher_spannung, selbstentladung_prozent=0.05):
-    gesamtstromverbrauch_ma = stromverbrauch_geraet + 2 * stromverbrauch_verbraucher  # Zwei Verbraucher gleichzeitig
-    leistung_watt = gesamtstromverbrauch_ma / 1000 * verbraucher_spannung
-    akkuenergie_wh = akkukapazität_mah / 1000 * akkuspannung
+# Funktion zum Sortieren der Treeview-Spalten
+def treeview_sort_column(tv, col, reverse):
+    l = [(tv.set(k, col), k) for k in tv.get_children('')]
+    
+    try:
+        l.sort(key=lambda t: float(t[0]), reverse=reverse)
+    except ValueError:
+        l.sort(key=lambda t: t[0], reverse=reverse)
 
-    selbstentladung_wh_pro_tag = akkuenergie_wh * (selbstentladung_prozent / 100)
-    
-    laufzeit_stunden = 0
-    while akkuenergie_wh > 0:
-        akkuenergie_wh -= leistung_watt  # Energieverbrauch pro Stunde abziehen
-        laufzeit_stunden += 1
-        if laufzeit_stunden % 24 == 0:  # Selbstentladung nur einmal pro Tag abziehen
-            akkuenergie_wh -= selbstentladung_wh_pro_tag
-    
-    laufzeit_minuten = laufzeit_stunden * 60
-    laufzeit_tage = laufzeit_stunden / 24
-    
-    return laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch_ma, leistung_watt
+    for index, (val, k) in enumerate(l):
+        tv.move(k, '', index)
 
-# Funktion für den Log Mode
-def berechne_akkulaufzeit_log_mode(akkuspannung, interne_spannung, akkukapazität_mah, sleep_strom, on_strom, stromverbrauch_verbraucher, verbraucher_spannung, wakeup_interval_s, verbraucher_einschaltzeit_ms=100, verarbeitungszeit_ms=50, selbstentladung_prozent=0.05):
-    # Berechnung der Einschaltdauer und Verarbeitungszeit in Stunden
-    verbraucher_einschaltzeit_h = verbraucher_einschaltzeit_ms / 1000 / 3600
-    verarbeitungszeit_h = verarbeitungszeit_ms / 1000 / 3600
-    
-    # Berechnung des Anteils der "On"-Zeit pro Stunde (in Stunden)
-    on_time_per_hour_h = 3600 / wakeup_interval_s / 3600
-    
-    # Gesamtstromverbrauch im Log Mode:
-    # - Stromverbrauch im Schlafmodus (sleep_strom * Zeit im Schlafmodus)
-    # - Stromverbrauch im Wachmodus (on_strom * Zeit im Wachmodus)
-    # - Stromverbrauch der beiden Verbraucher (stromverbrauch_verbraucher * Anzahl der Verbraucher * Zeit im Wachmodus)
-    gesamtstromverbrauch_ma = (sleep_strom * (1 - on_time_per_hour_h)) + \
-                              ((on_strom + 2 * stromverbrauch_verbraucher) * on_time_per_hour_h) + \
-                              (2 * stromverbrauch_verbraucher * verbraucher_einschaltzeit_h) + \
-                              (on_strom * verarbeitungszeit_h)
-    
-    # Ausgabe für Debugging
-    print(f"Stromverbrauch (mA) bei Verbraucher: {stromverbrauch_verbraucher} mA")
-    print(f"Gesamtstromverbrauch: {gesamtstromverbrauch_ma:.2f} mA\n")
-    
-    leistung_watt = gesamtstromverbrauch_ma / 1000 * verbraucher_spannung
-    akkuenergie_wh = akkukapazität_mah / 1000 * akkuspannung
+    tv.heading(col, command=lambda: treeview_sort_column(tv, col, not reverse))
 
-    selbstentladung_wh_pro_tag = akkuenergie_wh * (selbstentladung_prozent / 100)
-    
-    laufzeit_stunden = 0
-    while akkuenergie_wh > 0:
-        akkuenergie_wh -= leistung_watt  # Energieverbrauch pro Stunde abziehen
-        laufzeit_stunden += 1
-        if laufzeit_stunden % 24 == 0:  # Selbstentladung nur einmal pro Tag abziehen
-            akkuenergie_wh -= selbstentladung_wh_pro_tag
-    
-    laufzeit_minuten = laufzeit_stunden * 60
-    laufzeit_tage = laufzeit_stunden / 24
-    
-    return laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch_ma, leistung_watt
+# Funktion für die Berechnungen und das Anzeigen der Ergebnisse
+def berechne_akkulaufzeit():
+    try:
+        akkuspannung = float(entry_akkuspannung.get())
+        akkukapazität_mah = int(entry_akkukapazität.get())
+        stromverbrauch_always_on = float(entry_strom_always_on.get())
+        stromverbrauch_log_sleep = float(entry_strom_log_sleep.get())
+        stromverbrauch_log_on = float(entry_strom_log_on.get())
+        stromverbrauch_sleep_mode = float(entry_strom_sleep_mode.get())
+        verbraucher_stroeme = [float(x) for x in entry_verbraucher_stroeme.get().split(',')]
+        verbraucher_spannungen = [float(x) for x in entry_verbraucher_spannungen.get().split(',')]
+        booster_wirkungsgrad = float(entry_booster_wirkungsgrad.get())
+        wakeup_interval_s = int(entry_wakeup_interval.get())
+        verbraucher_einschaltzeit_ms = int(entry_verbraucher_einschaltzeit.get())
+        verarbeitungszeit_ms = int(entry_verarbeitungszeit.get())
+        selbstentladung_prozent = float(entry_selbstentladung.get())
 
-# Funktion für den Sleep Mode
-def berechne_akkulaufzeit_sleep_mode(akkuspannung, interne_spannung, akkukapazität_mah, sleep_strom, verbraucher_spannung, selbstentladung_prozent=0.05):
-    gesamtstromverbrauch_ma = sleep_strom
-    leistung_watt = gesamtstromverbrauch_ma / 1000 * verbraucher_spannung
-    akkuenergie_wh = akkukapazität_mah / 1000 * akkuspannung
+        verbraucher_namen = {
+            1.0: 'HCD',
+            4.5: 'HC2A',
+            10.0: 'PCD',
+            100.0: 'SF82'
+        }
 
-    selbstentladung_wh_pro_tag = akkuenergie_wh * (selbstentladung_prozent / 100)
-    
-    laufzeit_stunden = 0
-    while akkuenergie_wh > 0:
-        akkuenergie_wh -= leistung_watt  # Energieverbrauch pro Stunde abziehen
-        laufzeit_stunden += 1
-        if laufzeit_stunden % 24 == 0:  # Selbstentladung nur einmal pro Tag abziehen
-            akkuenergie_wh -= selbstentladung_wh_pro_tag
-    
-    laufzeit_minuten = laufzeit_stunden * 60
-    laufzeit_tage = laufzeit_stunden / 24
-    
-    return laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch_ma, leistung_watt
+        ergebnisse = []
 
-# Konstanten
-akkuspannung = 7.2
-interne_spannung = 3.3
-akkukapazität_mah = 2700
-stromverbrauch_always_on = 40
-stromverbrauch_log_sleep = 0.1
-stromverbrauch_log_on = 5.0
-stromverbrauch_sleep_mode = 0.05
-verbraucher_stroeme = [1, 4.5, 10, 100]
-wakeup_interval_s = 60
-verbraucher_einschaltzeit_ms = 100  # Einschaltzeit des Verbrauchers in Millisekunden
-verarbeitungszeit_ms = 50  # Verarbeitungszeit des Geräts in Millisekunden
-selbstentladung_prozent = 0.05  # 0.05% Selbstentladung pro Tag
+        def berechne_laufzeit(akkuenergie_wh, leistung_watt, selbstentladung_prozent):
+            selbstentladung_wh_pro_tag = akkuenergie_wh * (selbstentladung_prozent / 100)
+            laufzeit_stunden = 0
+            while akkuenergie_wh > 0:
+                akkuenergie_wh -= leistung_watt
+                laufzeit_stunden += 1
+                if laufzeit_stunden % 24 == 0:
+                    akkuenergie_wh -= selbstentladung_wh_pro_tag
+            laufzeit_minuten = laufzeit_stunden * 60
+            laufzeit_tage = laufzeit_stunden / 24
+            return laufzeit_minuten, laufzeit_stunden, laufzeit_tage
 
-# Ergebnisse speichern
-ergebnisse = {
-    'Always ON Mode': [],
-    'Log Mode': [],
-    'Sleep Mode': []
-}
+        def berechne_akkulaufzeit_always_on(akkuspannung, akkukapazität_mah, stromverbrauch_geraet, stromverbrauch_verbraucher, verbraucher_spannung, booster_wirkungsgrad=1.0, selbstentladung_prozent=0.05):
+            if verbraucher_spannung == 5.0:
+                stromverbrauch_verbraucher /= booster_wirkungsgrad
+            gesamtstromverbrauch_ma = stromverbrauch_geraet + 2 * stromverbrauch_verbraucher
+            leistung_watt = gesamtstromverbrauch_ma / 1000 * verbraucher_spannung
+            akkuenergie_wh = akkukapazität_mah / 1000 * akkuspannung
+            return berechne_laufzeit(akkuenergie_wh, leistung_watt, selbstentladung_prozent)
 
-# Berechnungen für beide Spannungsvarianten
-spannungen = {'Variante 1 (3.4V)': 3.4, 'Variante 2 (5V)': 5.0}
+        def berechne_akkulaufzeit_log_mode(akkuspannung, akkukapazität_mah, sleep_strom, on_strom, stromverbrauch_verbraucher, verbraucher_spannung, wakeup_interval_s, verbraucher_einschaltzeit_ms=100, verarbeitungszeit_ms=50, booster_wirkungsgrad=1.0, selbstentladung_prozent=0.05):
+            verbraucher_einschaltzeit_h = verbraucher_einschaltzeit_ms / 1000 / 3600
+            verarbeitungszeit_h = verarbeitungszeit_ms / 1000 / 3600
+            on_time_per_hour_h = 3600 / wakeup_interval_s / 3600
+            if verbraucher_spannung == 5.0:
+                stromverbrauch_verbraucher /= booster_wirkungsgrad
+            gesamtstromverbrauch_ma = (sleep_strom * (1 - on_time_per_hour_h)) + \
+                                      ((on_strom + 2 * stromverbrauch_verbraucher) * on_time_per_hour_h) + \
+                                      (2 * stromverbrauch_verbraucher * verbraucher_einschaltzeit_h) + \
+                                      (on_strom * verarbeitungszeit_h)
+            leistung_watt = gesamtstromverbrauch_ma / 1000 * verbraucher_spannung
+            akkuenergie_wh = akkukapazität_mah / 1000 * akkuspannung
+            return berechne_laufzeit(akkuenergie_wh, leistung_watt, selbstentladung_prozent)
 
-# Für die Konsolenausgabe: Wir nehmen die Variante 1 (3.4V) und den niedrigsten Verbraucher (10 mA)
-spannung_name = 'Variante 1 (3.4V)'
-verbraucher_spannung = spannungen[spannung_name]
-stromverbrauch_verbraucher = verbraucher_stroeme[0]
+        def berechne_akkulaufzeit_sleep_mode(akkuspannung, akkukapazität_mah, sleep_strom, verbraucher_spannung, selbstentladung_prozent=0.05):
+            gesamtstromverbrauch_ma = sleep_strom
+            leistung_watt = gesamtstromverbrauch_ma / 1000 * verbraucher_spannung
+            akkuenergie_wh = akkukapazität_mah / 1000 * akkuspannung
+            return berechne_laufzeit(akkuenergie_wh, leistung_watt, selbstentladung_prozent)
 
-# Berechnung für Log Mode für den niedrigsten Verbraucher
-laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch, leistung_watt = berechne_akkulaufzeit_log_mode(
-    akkuspannung, interne_spannung, akkukapazität_mah, stromverbrauch_log_sleep, stromverbrauch_log_on, stromverbrauch_verbraucher, verbraucher_spannung, wakeup_interval_s, verbraucher_einschaltzeit_ms=verbraucher_einschaltzeit_ms, verarbeitungszeit_ms=verarbeitungszeit_ms, selbstentladung_prozent=selbstentladung_prozent
-)
+        # Funktion zum Abrufen der ausgewählten Werte in der Listbox
+        def get_selected_modus():
+            selected_indices = modus_listbox.curselection()
+            return [modus_listbox.get(i) for i in selected_indices]
 
-# Ausgabe in der Konsole
-print(f"Variante 1 (3.4V) - Log Mode mit niedrigstem Verbrauch:")
-print(f"Verbraucherstrom: {stromverbrauch_verbraucher} mA")
-print(f"Gesamtstromverbrauch: {gesamtstromverbrauch} mA")
-print(f"Benötigte Leistung: {leistung_watt:.2f} Watt")
-print(f"Akkulaufzeit: {laufzeit_minuten:.2f} Minuten, {laufzeit_stunden:.2f} Stunden, {laufzeit_tage:.2f} Tage\n")
+        def get_selected_probe():
+            selected_indices = probe_listbox.curselection()
+            return [probe_listbox.get(i) for i in selected_indices]
 
-# Restliche Berechnungen für Excel
-for spannung_name, verbraucher_spannung in spannungen.items():
-    # Always ON Mode
-    for stromverbrauch_verbraucher in verbraucher_stroeme:
-        laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch, leistung_watt = berechne_akkulaufzeit_always_on(
-            akkuspannung, interne_spannung, akkukapazität_mah, stromverbrauch_always_on, stromverbrauch_verbraucher, verbraucher_spannung, selbstentladung_prozent=selbstentladung_prozent
-        )
-        ergebnisse['Always ON Mode'].append([spannung_name, stromverbrauch_verbraucher, gesamtstromverbrauch, leistung_watt, '', '', laufzeit_minuten, laufzeit_stunden, laufzeit_tage])
-    
-    # Log Mode
-    for stromverbrauch_verbraucher in verbraucher_stroeme:
-        laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch, leistung_watt = berechne_akkulaufzeit_log_mode(
-            akkuspannung, interne_spannung, akkukapazität_mah, stromverbrauch_log_sleep, stromverbrauch_log_on, stromverbrauch_verbraucher, verbraucher_spannung, wakeup_interval_s, verbraucher_einschaltzeit_ms=verbraucher_einschaltzeit_ms, verarbeitungszeit_ms=verarbeitungszeit_ms, selbstentladung_prozent=selbstentladung_prozent
-        )
-        ergebnisse['Log Mode'].append([spannung_name, stromverbrauch_verbraucher, gesamtstromverbrauch, leistung_watt, wakeup_interval_s, verbraucher_einschaltzeit_ms, laufzeit_minuten, laufzeit_stunden, laufzeit_tage])
-    
-    # Sleep Mode
-    for stromverbrauch_verbraucher in verbraucher_stroeme:
-        laufzeit_minuten, laufzeit_stunden, laufzeit_tage, gesamtstromverbrauch, leistung_watt = berechne_akkulaufzeit_sleep_mode(
-            akkuspannung, interne_spannung, akkukapazität_mah, stromverbrauch_sleep_mode, verbraucher_spannung, selbstentladung_prozent=selbstentladung_prozent
-        )
-        ergebnisse['Sleep Mode'].append([spannung_name, 0, gesamtstromverbrauch, leistung_watt, '', '', laufzeit_minuten, laufzeit_stunden, laufzeit_tage])
+        # Ergebnisberechnung
+        for verbraucher_spannung in verbraucher_spannungen:
+            for stromverbrauch_verbraucher in verbraucher_stroeme:
+                verbraucher_name = verbraucher_namen.get(stromverbrauch_verbraucher, 'Unbekannt')
 
-# Ergebnisse in Excel speichern
-with pd.ExcelWriter('Batterielaufzeit_Berechnungen.xlsx') as writer:
-    for mode, data in ergebnisse.items():
-        df = pd.DataFrame(data, columns=['Spannungsvariante', 'Verbraucherstrom (mA)', 'Gesamtstromverbrauch (mA)', 'Benötigte Leistung (Watt)', 'Messintervall (s)', 'Verbraucher-Einschaltzeit (ms)', 'Akkulaufzeit (Minuten)', 'Akkulaufzeit (Stunden)', 'Akkulaufzeit (Tage)'])
-        df.to_excel(writer, sheet_name=mode, index=False)
+                laufzeit_minuten, laufzeit_stunden, laufzeit_tage = berechne_akkulaufzeit_always_on(
+                    akkuspannung, akkukapazität_mah, stromverbrauch_always_on, stromverbrauch_verbraucher, verbraucher_spannung, booster_wirkungsgrad=booster_wirkungsgrad, selbstentladung_prozent=selbstentladung_prozent
+                )
+                ergebnisse.append({
+                    'Probe': f"{verbraucher_name}",
+                    'Strom_Verbraucher': f"{stromverbrauch_verbraucher:.1f} mA",
+                    'Spannung': f"{verbraucher_spannung:.2f} V",
+                    'Laufzeit_min': f"{laufzeit_minuten:.2f} min",
+                    'Laufzeit_d': f"{laufzeit_tage:.2f} d",
+                    'Modus': 'Always ON Mode'
+                })
 
-print("Die Berechnungen wurden erfolgreich in 'Batterielaufzeit_Berechnungen.xlsx' gespeichert.")
+                laufzeit_minuten, laufzeit_stunden, laufzeit_tage = berechne_akkulaufzeit_log_mode(
+                    akkuspannung, akkukapazität_mah, stromverbrauch_log_sleep, stromverbrauch_log_on, stromverbrauch_verbraucher, verbraucher_spannung, wakeup_interval_s, verbraucher_einschaltzeit_ms=verbraucher_einschaltzeit_ms, verarbeitungszeit_ms=verarbeitungszeit_ms, booster_wirkungsgrad=booster_wirkungsgrad, selbstentladung_prozent=selbstentladung_prozent
+                )
+                ergebnisse.append({
+                    'Probe': f"{verbraucher_name}",
+                    'Strom_Verbraucher': f"{stromverbrauch_verbraucher:.1f} mA",
+                    'Spannung': f"{verbraucher_spannung:.2f} V",
+                    'Laufzeit_min': f"{laufzeit_minuten:.2f} min",
+                    'Laufzeit_d': f"{laufzeit_tage:.2f} d",
+                    'Modus': 'Log Mode'
+                })
+
+                laufzeit_minuten, laufzeit_stunden, laufzeit_tage = berechne_akkulaufzeit_sleep_mode(
+                    akkuspannung, akkukapazität_mah, stromverbrauch_sleep_mode, verbraucher_spannung, selbstentladung_prozent=selbstentladung_prozent
+                )
+                ergebnisse.append({
+                    'Probe': f"{verbraucher_name}",
+                    'Strom_Verbraucher': f"{stromverbrauch_verbraucher:.1f} mA",
+                    'Spannung': f"{verbraucher_spannung:.2f} V",
+                    'Laufzeit_min': f"{laufzeit_minuten:.2f} min",
+                    'Laufzeit_d': f"{laufzeit_tage:.2f} d",
+                    'Modus': 'Sleep Mode'
+                })
+
+        # Modus und Probe basierend auf Mehrfachauswahl in den Listboxen filtern
+        modus_filter = get_selected_modus()
+        probe_filter = get_selected_probe()
+
+        gefilterte_ergebnisse = [result for result in ergebnisse if 
+                                (not modus_filter or result['Modus'] in modus_filter) and 
+                                (not probe_filter or result['Probe'] in probe_filter)]
+
+        # Treeview leeren und gefilterte Ergebnisse anzeigen
+        tree.delete(*tree.get_children())
+        for result in gefilterte_ergebnisse:
+            tree.insert('', 'end', values=(result['Modus'], result['Probe'], result['Strom_Verbraucher'], result['Spannung'], result['Laufzeit_min'], result['Laufzeit_d']))
+
+    except ValueError as e:
+        tree.delete(*tree.get_children())
+        tree.insert('', 'end', values=("Fehler", "Fehler", "Fehler", "Fehler", "Fehler", str(e)))
+
+# Funktion zum Beenden der Anwendung
+def beenden():
+    root.quit()
+
+# GUI-Fenster erstellen
+root = tk.Tk()
+root.title("Akkulaufzeit Rechner")
+
+# Dynamisches Fenster: Spalten und Zeilen so einstellen, dass sie sich beim Ziehen anpassen
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_rowconfigure(17, weight=1)
+
+# Eingabefelder für die Konstanten mit linksbündigen Labels, zentrierten Textboxen, und Padding
+tk.Label(root, text="Akkuspannung (V):").grid(row=0, column=0, sticky="w", padx=10, pady=5)
+entry_akkuspannung = tk.Entry(root, justify='center')
+entry_akkuspannung.grid(row=0, column=1, padx=10, pady=5)
+entry_akkuspannung.insert(0, "3.7")
+
+tk.Label(root, text="Akkukapazität (mAh):").grid(row=1, column=0, sticky="w", padx=10, pady=5)
+entry_akkukapazität = tk.Entry(root, justify='center')
+entry_akkukapazität.grid(row=1, column=1, padx=10, pady=5)
+entry_akkukapazität.insert(0, "3500")
+
+tk.Label(root, text="Stromverbrauch Always ON (mA):").grid(row=2, column=0, sticky="w", padx=10, pady=5)
+entry_strom_always_on = tk.Entry(root, justify='center')
+entry_strom_always_on.grid(row=2, column=1, padx=10, pady=5)
+entry_strom_always_on.insert(0, "40")
+
+tk.Label(root, text="Stromverbrauch Log Sleep (mA):").grid(row=3, column=0, sticky="w", padx=10, pady=5)
+entry_strom_log_sleep = tk.Entry(root, justify='center')
+entry_strom_log_sleep.grid(row=3, column=1, padx=10, pady=5)
+entry_strom_log_sleep.insert(0, "0.3")
+
+tk.Label(root, text="Stromverbrauch Log ON (mA):").grid(row=4, column=0, sticky="w", padx=10, pady=5)
+entry_strom_log_on = tk.Entry(root, justify='center')
+entry_strom_log_on.grid(row=4, column=1, padx=10, pady=5)
+entry_strom_log_on.insert(0, "2.5")
+
+tk.Label(root, text="Stromverbrauch Sleep Mode (mA):").grid(row=5, column=0, sticky="w", padx=10, pady=5)
+entry_strom_sleep_mode = tk.Entry(root, justify='center')
+entry_strom_sleep_mode.grid(row=5, column=1, padx=10, pady=5)
+entry_strom_sleep_mode.insert(0, "0.25")
+
+tk.Label(root, text="Verbraucher Ströme (mA, Kommagetrennt):").grid(row=6, column=0, sticky="w", padx=10, pady=5)
+entry_verbraucher_stroeme = tk.Entry(root, justify='center')
+entry_verbraucher_stroeme.grid(row=6, column=1, padx=10, pady=5)
+entry_verbraucher_stroeme.insert(0, "1, 4.5, 10, 100")
+
+tk.Label(root, text="Verbraucher Spannungen (V, Kommagetrennt):").grid(row=7, column=0, sticky="w", padx=10, pady=5)
+entry_verbraucher_spannungen = tk.Entry(root, justify='center')
+entry_verbraucher_spannungen.grid(row=7, column=1, padx=10, pady=5)
+entry_verbraucher_spannungen.insert(0, "3.45, 5.0")
+
+tk.Label(root, text="Booster Wirkungsgrad (%):").grid(row=8, column=0, sticky="w", padx=10, pady=5)
+entry_booster_wirkungsgrad = tk.Entry(root, justify='center')
+entry_booster_wirkungsgrad.grid(row=8, column=1, padx=10, pady=5)
+entry_booster_wirkungsgrad.insert(0, "0.90")
+
+tk.Label(root, text="Wakeup Intervall (s):").grid(row=9, column=0, sticky="w", padx=10, pady=5)
+entry_wakeup_interval = tk.Entry(root, justify='center')
+entry_wakeup_interval.grid(row=9, column=1, padx=10, pady=5)
+entry_wakeup_interval.insert(0, "60")
+
+tk.Label(root, text="Verbraucher Einschaltzeit (ms):").grid(row=10, column=0, sticky="w", padx=10, pady=5)
+entry_verbraucher_einschaltzeit = tk.Entry(root, justify='center')
+entry_verbraucher_einschaltzeit.grid(row=10, column=1, padx=10, pady=5)
+entry_verbraucher_einschaltzeit.insert(0, "150")
+
+tk.Label(root, text="Verarbeitungszeit (ms):").grid(row=11, column=0, sticky="w", padx=10, pady=5)
+entry_verarbeitungszeit = tk.Entry(root, justify='center')
+entry_verarbeitungszeit.grid(row=11, column=1, padx=10, pady=5)
+entry_verarbeitungszeit.insert(0, "50")
+
+tk.Label(root, text="Selbstentladung pro Tag (%):").grid(row=12, column=0, sticky="w", padx=10, pady=5)
+entry_selbstentladung = tk.Entry(root, justify='center')
+entry_selbstentladung.grid(row=12, column=1, padx=10, pady=5)
+entry_selbstentladung.insert(0, "0.05")
+
+# Modus Listbox mit Mehrfachauswahl
+tk.Label(root, text="Modus wählen:").grid(row=13, column=0, sticky="w", padx=10, pady=5)
+modus_listbox = tk.Listbox(root, selectmode='multiple', height=3, exportselection=False)
+modus_listbox.grid(row=13, column=1, padx=10, pady=5)
+modus_listbox.insert(0, "Always ON Mode")
+modus_listbox.insert(1, "Log Mode")
+modus_listbox.insert(2, "Sleep Mode")
+
+# Probe Listbox mit Mehrfachauswahl
+tk.Label(root, text="Probe wählen:").grid(row=14, column=0, sticky="w", padx=10, pady=5)
+probe_listbox = tk.Listbox(root, selectmode='multiple', height=4, exportselection=False)
+probe_listbox.grid(row=14, column=1, padx=10, pady=5)
+probe_listbox.insert(0, "HCD")
+probe_listbox.insert(1, "HC2A")
+probe_listbox.insert(2, "PCD")
+probe_listbox.insert(3, "SF82")
+
+# Button zum Berechnen und Beenden rechtsbündig
+berechnen_button = tk.Button(root, text="Berechnen", command=berechne_akkulaufzeit)
+berechnen_button.grid(row=15, column=1, sticky="e", padx=10, pady=10)
+
+beenden_button = tk.Button(root, text="Beenden", command=beenden)
+beenden_button.grid(row=16, column=1, sticky="e", padx=10, pady=10)
+
+# Treeview (DataGridView-ähnliche Ansicht) für die Ergebnisse
+tree = ttk.Treeview(root, columns=('Modus', 'Probe', 'Strom_Verbraucher', 'Spannung', 'Laufzeit_min', 'Laufzeit_d'), show='headings')
+tree.grid(row=17, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")  # Treeview dynamisch machen
+
+# Spaltenüberschriften festlegen und sortierbare Spalten hinzufügen
+for col in tree['columns']:
+    tree.heading(col, text=col, command=lambda _col=col: treeview_sort_column(tree, _col, False))
+    tree.column(col, anchor='center', width=80)  # Setze die Breite jeder Spalte auf 80 und zentriere
+
+# GUI starten
+root.mainloop()
