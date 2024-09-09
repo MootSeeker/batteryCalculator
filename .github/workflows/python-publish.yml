@@ -1,4 +1,4 @@
-name: Build and Publish
+name: Build and Publish Windows Executable
 
 on:
   push:
@@ -8,71 +8,32 @@ on:
     types: [published]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        
+  build-windows:
+
+    runs-on: windows-latest
+
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4  # Verwende die neueste Version von setup-python
       with:
         python-version: '3.x'
-        
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build
-        
-    - name: Build package
-      run: |
-        python -m build
-        
-    - name: Install py2app (macOS only)
-      if: runner.os == 'macOS'
-      run: |
-        python -m pip install py2app
-        
-    - name: Build macOS app
-      if: runner.os == 'macOS'
-      run: |
-        python setup.py py2app
-        
-    - name: Install pyinstaller (Windows/Linux)
-      if: runner.os == 'Windows' || runner.os == 'Linux'
-      run: |
-        python -m pip install pyinstaller
-        
-    - name: Build Windows/Linux app
-      if: runner.os == 'Windows' || runner.os == 'Linux'
+        pip install build pyinstaller
+
+    - name: Build Windows executable
       run: |
         pyinstaller --onefile batteryCalculator.py
-        
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ runner.workspace }}/dist/batteryCalculator
-        asset_name: batteryCalculator-${{ matrix.os }}-${{ github.event.release.tag_name }}.zip
-        asset_content_type: application/zip
+        # Ensure the output executable is in the correct folder
+        mkdir -p dist/windows
+        mv dist/batteryCalculator.exe dist/windows/
 
-    - name: Upload macOS app asset
-      if: runner.os == 'macOS'
-      uses: actions/upload-release-asset@v1
+    - name: Upload Windows Executable
+      uses: actions/upload-artifact@v3
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ runner.workspace }}/dist/batteryCalculator.app
-        asset_name: batteryCalculator-${{ github.event.release.tag_name }}.app
-        asset_content_type: application/octet-stream
-
-    - name: Upload Windows/Linux app asset
-      if: runner.os == 'Windows' || runner.os == 'Linux'
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ runner.workspace }}/dist/batteryCalculator
-        asset_name: batteryCalculator-${{ matrix.os }}-${{ github.event.release.tag_name }}.exe
-        asset_content_type: application/octet-stream
+        name: windows-executable
+        path: dist/windows/batteryCalculator.exe
