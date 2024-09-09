@@ -1,11 +1,10 @@
 from setuptools import setup
 
-APP = ['batteryCalculator.py']
+APP = ['your_app.py']
 DATA_FILES = []
 OPTIONS = {
     'argv_emulation': True,
-    'packages': ['batteryCalculator'],  # Ersetze 'your_package' durch den Namen deines Pakets, falls erforderlich
-    'iconfile': 'icon.icns',  # optional
+    'iconfile': 'icon.icns',
 }
 
 setup(
