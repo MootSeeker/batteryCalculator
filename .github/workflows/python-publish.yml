@@ -10,12 +10,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4  # Aktualisiere auf die neueste Version
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4  # Version 4 ist kompatibel mit Node.js 20
       with:
-        python-version: '3.10'  
+        python-version: '3.10'  # Python 3.10 wird hier festgelegt
 
     - name: Install dependencies
       run: |
@@ -24,14 +24,14 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --onefile your_script.py
+        pyinstaller --onefile your_script.py  # Stelle sicher, dass 'your_script.py' der richtige Skriptname ist
       shell: cmd
 
     - name: Upload EXE as artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4  # Aktualisiere auf Version 4
       with:
         name: batteryCalculator
-        path: batteryCalculator.exe
+        path: dist/batteryCalculator.exe  # Pfad zum erzeugten .exe-File muss korrekt sein
 
   release:
     needs: build
@@ -39,13 +39,13 @@ jobs:
 
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4  # Aktualisiere auf Version 4
       with:
-        name: my-python-app
+        name: batteryCalculator  # Passe den Namen an, wenn der Artifaktname "batteryCalculator" ist
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1.0
+      uses: softprops/action-gh-release@v1  # Hier gibt es kein v1.0, die korrekte Version ist v1
       with:
-        files: dist/your_script.exe
+        files: dist/batteryCalculator.exe  # Stelle sicher, dass der Pfad zum .exe-File korrekt ist
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub Token für Release-Berechtigungen
