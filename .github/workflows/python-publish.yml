@@ -26,12 +26,12 @@ jobs:
 
     - name: Build package
       run: |
-        pyinstaller --onefile batteryCalculator.py  # Erzeuge eine .exe-Datei aus deinem Python-Skript
+        pyinstaller --onefile calculator.py  # Erzeuge eine .exe-Datei aus 'calculator.py'
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: dist/batteryCalculator.exe  # Pfad zur erstellten .exe-Datei
-        asset_name: batteryCalculator-${{ github.event.release.tag_name }}.exe  # Name des hochgeladenen Assets
+        asset_path: dist/calculator.exe  # Pfad zur erstellten .exe-Datei
+        asset_name: calculator-${{ github.event.release.tag_name }}.exe  # Name des hochgeladenen Assets
         asset_content_type: application/octet-stream
