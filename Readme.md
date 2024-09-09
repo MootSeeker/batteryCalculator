@@ -25,8 +25,8 @@ The **Battery Life Calculator** is a Python application built using the `tkinter
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/yourusername/battery-life-calculator.git
-    cd battery-life-calculator
+    git clone https://github.com/mootseeker/batteryCalculator.git
+    cd batteryCalculator
     ```
 
 2. **Install dependencies**:
