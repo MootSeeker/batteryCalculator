@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v4  # Checkt das Repository aus
 
     - name: Set up Python
-      uses: actions/setup-python@v5  # Richtiges Setup der Python-Version
+      uses: actions/setup-python@v4  # Richtiges Setup der Python-Version
       with:
         python-version: '3.10'  # Du kannst die Version anpassen, falls nötig
 
@@ -28,10 +28,22 @@ jobs:
       run: |
         pyinstaller --onefile calculator.py  # Erzeuge eine .exe-Datei aus 'calculator.py'
 
+  release:
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4  # Checkt das Repository aus
+
+    - name: Download Artifact
+      uses: actions/download-artifact@v2  # Lade das erstellte Artefakt herunter
+      with:
+        name: dist/calculator.exe  # Pfad zur erstellten .exe-Datei
+
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
       with:
-        upload_url: ${{ github.event.release.upload_url }}
+        upload_url: ${{ github.event.release.upload_url }}  # Release-Upload-URL verwenden
         asset_path: dist/calculator.exe  # Pfad zur erstellten .exe-Datei
         asset_name: calculator-${{ github.event.release.tag_name }}.exe  # Name des hochgeladenen Assets
         asset_content_type: application/octet-stream
