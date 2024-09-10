@@ -1,0 +1,37 @@
+name: Build and Release Executable
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      # Install PyInstaller
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      # Build the .exe using PyInstaller
+      - name: Build .exe using PyInstaller
+        run: pyinstaller --onefile calculator.py
+
+      # Upload the .exe to the Release
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/calculator.exe
+          asset_name: calculator.exe
+          asset_content_type: application/octet-stream
