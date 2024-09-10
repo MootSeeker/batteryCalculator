@@ -1,3 +1,42 @@
+"""
+================================================================================
+Battery Life Calculator GUI Application
+--------------------------------------------------------------------------------
+@file: calculator.py
+@brief: This script creates a GUI application using Tkinter for calculating 
+        battery runtime in different operational modes (Always ON, Log Mode, 
+        and Sleep Mode) based on user inputs for power consumption, battery 
+        characteristics, and other parameters. The results are displayed in 
+        a sortable Treeview widget.
+
+@author: Mootseeker
+@date: 10.09.2024
+
+@details:
+    - The application allows the user to input various parameters, such as 
+      battery voltage, capacity, power consumption, and self-discharge rate.
+    - The runtime is calculated for multiple operation modes:
+        1. Always ON Mode
+        2. Log Mode
+        3. Sleep Mode
+    - Results are filtered and displayed in a Treeview table, where each column 
+      is sortable by clicking on the column headers.
+    - Input validation is performed, and any errors are shown in the result table.
+
+@usage:
+    Run the script using Python 3.x, and the Tkinter GUI will appear. Fill in 
+    the required fields and click on "Calculate" to perform the battery lifetime 
+    calculations. The results are shown in a dynamic table with sortable columns.
+
+@dependencies:
+    - Tkinter: For the GUI components.
+    - PyInstaller (optional): To convert this script into a standalone executable 
+      file if needed.
+
+@license: MIT License
+================================================================================
+"""
+
 import tkinter as tk
 from tkinter import ttk
 
