@@ -58,6 +58,21 @@ def treeview_sort_column(tv, col, reverse):
 
     tv.heading(col, command=lambda: treeview_sort_column(tv, col, not reverse))
 
+## @brief Function to copy the results to the clipboard.
+def copy_to_clipboard():
+    """Copies the Treeview results to the clipboard."""
+    clipboard_content = ""
+    # Get all rows in the Treeview
+    for row in tree.get_children():
+        values = tree.item(row)["values"]
+        row_text = "\t".join([str(value) for value in values]) + "\n"
+        clipboard_content += row_text
+
+    # Copy to clipboard
+    root.clipboard_clear()
+    root.clipboard_append(clipboard_content)
+    root.update()  # now it stays on the clipboard after the window is closed
+
 ## @brief Function to perform battery lifetime calculations and display results in the Treeview.
 def calculate_battery_life():
     """Calculates battery life for various modes and displays the filtered results."""
@@ -383,6 +398,9 @@ calculate_button.grid(row=0, column=0, padx=5)
 exit_button = tk.Button(frame_buttons, text="Exit", command=exit_app)
 exit_button.grid(row=0, column=1, padx=5)
 
+# Copy to Clipboard button
+copy_button = tk.Button(frame_buttons, text="Export to Clipboard", command=copy_to_clipboard)
+copy_button.grid(row=0, column=2, padx=5)
 
 # Frame to contain the Treeview and Scrollbars
 frame_tree = tk.Frame(root)
