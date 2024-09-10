@@ -1,37 +1,49 @@
-name: Build and Release Executable
+name: Build and Upload Package and Executable
 
 on:
   release:
-    types: [created]
+    types: [published]
+
+permissions:
+  contents: write  # Setze Schreibberechtigungen für das Hochladen des Release-Assets
 
 jobs:
   build:
-    runs-on: windows-latest
+
+    runs-on: windows-latest  # Verwende Windows als Runner, da wir eine Windows .exe erstellen möchten
 
     steps:
-      # Checkout the repository
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - uses: actions/checkout@v4  # Checke den Quellcode aus
 
-      # Set up Python environment
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v3  # Setze die Python-Umgebung auf
+      with:
+        python-version: '3.x'
 
-      # Install PyInstaller
-      - name: Install PyInstaller
-        run: pip install pyinstaller
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller build  # Installiere PyInstaller für die .exe-Erstellung und build für das Python-Paket
 
-      # Build the .exe using PyInstaller
-      - name: Build .exe using PyInstaller
-        run: pyinstaller --onefile calculator.py
+    - name: Build executable
+      run: pyinstaller --onefile calculator.py  # Erstelle die .exe-Datei aus deinem Python-Skript
 
-      # Upload the .exe to the Release
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: dist/calculator.exe
-          asset_name: calculator.exe
-          asset_content_type: application/octet-stream
+    - name: Build Python package
+      run: python -m build  # Baue das Python-Paket, um es auf PyPI hochzuladen
+
+    - name: Publish package to PyPI
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29  # PyPI Veröffentlichung
+      with:
+        user: __token__  # Verwende __token__ für die Authentifizierung
+        password: ${{ secrets.PYPI_API_TOKEN }}  # Nutze den geheimen PyPI-API-Token aus GitHub Secrets
+
+    - name: Upload Release Asset (.exe)
+      uses: actions/upload-release-asset@v1  # Verwende die Action, um die .exe hochzuladen
+      with:
+        upload_url: ${{ github.event.release.upload_url }}  # URL des Releases
+        asset_path: dist/calculator.exe  # Pfad zur erstellten .exe-Datei
+        asset_name: calculator.exe  # Name der .exe-Datei im Release
+        asset_content_type: application/octet-stream  # MIME-Typ der Datei
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Verwende das GitHub-Token zum Hochladen des Release-Assets
+s
