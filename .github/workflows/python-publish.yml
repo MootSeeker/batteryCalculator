@@ -46,4 +46,4 @@ jobs:
         asset_content_type: application/octet-stream  # MIME-Typ der Datei
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Verwende das GitHub-Token zum Hochladen des Release-Assets
-s
+
