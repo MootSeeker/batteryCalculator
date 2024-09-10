@@ -25,7 +25,7 @@ jobs:
 
       # Build .exe using PyInstaller
       - name: Build .exe using PyInstaller
-        run: pyinstaller --onefile calculator.py
+        run: pyinstaller --onefile --noconsole calculator.py
 
       # Upload the .exe file as an artifact to GitHub
       - name: Upload artifact
