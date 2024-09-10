@@ -38,7 +38,7 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
 
     - name: Upload Release Asset (.exe)
-      uses: actions/upload-release-asset@v4  # Verwende die Action, um die .exe hochzuladen
+      uses: actions/upload-release-asset@v1  # Verwende die Action, um die .exe hochzuladen
       with:
         upload_url: ${{ github.event.release.upload_url }}  # URL des Releases
         asset_path: dist/calculator.exe  # Pfad zur erstellten .exe-Datei
