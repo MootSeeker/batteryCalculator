@@ -29,7 +29,7 @@ jobs:
 
       # Upload the .exe file as an artifact to GitHub
       - name: Upload artifact
-        uses: actions/upload-artifact@v5  # Verwende die neueste Version der action
+        uses: actions/upload-artifact@v4  # Verwende die neueste Version der action
         with:
           name: calculator-exe
           path: dist/calculator.exe  # Pfad zur erstellten .exe Datei
