@@ -6,25 +6,30 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-latest  # Verwende Windows-Runner, um eine Windows .exe zu erstellen
 
     steps:
+      # Check out the repository
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
+      # Set up Python environment
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.10'  # Stelle sicher, dass die richtige Python-Version verwendet wird
 
+      # Install PyInstaller
       - name: Install PyInstaller
         run: pip install pyinstaller
 
+      # Build .exe using PyInstaller
       - name: Build .exe using PyInstaller
         run: pyinstaller --onefile calculator.py
 
+      # Upload the .exe file as an artifact to GitHub
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4  # Verwende die neueste Version der action
         with:
           name: calculator-exe
-          path: dist/calculator.exe
+          path: dist/calculator.exe  # Pfad zur erstellten .exe Datei
